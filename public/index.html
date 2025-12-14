@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Магазин</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: var(--tg-theme-bg-color, #f5f5f5);
+            color: var(--tg-theme-text-color, #000);
+            padding-bottom: 80px;
+        }
+
+        .header {
+            background: var(--tg-theme-secondary-bg-color, white);
+            padding: 16px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 12px;
+        }
+
+        .search {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            font-size: 14px;
+            background: var(--tg-theme-bg-color, #f5f5f5);
+        }
+
+        .categories {
+            display: flex;
+            gap: 8px;
+            padding: 16px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .category-btn {
+            padding: 10px 20px;
+            background: var(--tg-theme-secondary-bg-color, white);
+            border: 2px solid transparent;
+            border-radius: 20px;
+            cursor: pointer;
+            white-space: nowrap;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .category-btn.active {
+            background: var(--tg-theme-button-color, #2481cc);
+            color: var(--tg-theme-button-text-color, white);
+        }
+
+        .products {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 12px;
+            padding: 16px;
+        }
+
+        .product-card {
+            background: var(--tg-theme-secondary-bg-color, white);
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .product-card:active {
+            transform: scale(0.98);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            background: #f0f0f0;
+        }
+
+        .product-info {
+            padding: 12px;
+        }
+
+        .product-name {
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+            line-height: 1.3;
+            height: 36px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .product-price {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--tg-theme-button-color, #2481cc);
+        }
+
+        .old-price {
+            text-decoration: line-through;
+            color: #999;
+            font-size: 14px;
+            margin-left: 8px;
+        }
+
+        .out-of-stock {
+            color: #e74c3c;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .cart-button {
+            position: fixed;
+            bottom: 16px;
+            left: 16px;
+            right: 16px;
+            padding: 16px;
+            background: var(--tg-theme-button-color, #2481cc);
+            color: var(--tg-theme-button-text-color, white);
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .modal-content {
+            background: var(--tg-theme-bg-color, white);
+            width: 100%;
+            border-radius: 20px 20px 0 0;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #ddd;
+            position: sticky;
+            top: 0;
+            background: var(--tg-theme-bg-color, white);
+            z-index: 10;
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+        }
+
+        .close {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .product-detail {
+            padding: 20px;
+        }
+
+        .product-detail-image {
+            width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 16px 0;
+        }
+
+        .quantity-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            background: var(--tg-theme-button-color, #2481cc);
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .quantity {
+            font-size: 20px;
+            font-weight: bold;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .add-to-cart {
+            width: 100%;
+            padding: 16px;
+            background: var(--tg-theme-button-color, #2481cc);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .cart-items {
+            padding: 20px;
+        }
+
+        .cart-item {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .cart-item-image {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .cart-item-info {
+            flex: 1;
+        }
+
+        .cart-item-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .cart-item-price {
+            color: var(--tg-theme-button-color, #2481cc);
+            font-weight: bold;
+        }
+
+        .cart-item-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mini-btn {
+            width: 30px;
+            height: 30px;
+            border: none;
+            border-radius: 50%;
+            background: #f0f0f0;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            background: var(--tg-theme-secondary-bg-color, white);
+            color: var(--tg-theme-text-color, #000);
+        }
+
+        .cart-total {
+            padding: 20px;
+            background: var(--tg-theme-secondary-bg-color, #f8f9fa);
+            border-top: 1px solid #ddd;
+            position: sticky;
+            bottom: 0;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .total-row.final {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--tg-theme-button-color, #2481cc);
+        }
+
+        .empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        @media (max-width: 480px) {
+            .products {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 id="shop-name">🏪 Магазин</h1>
+        <input type="text" class="search" placeholder="🔍 Поиск товаров..." id="search">
+    </div>
+
+    <div class="categories" id="categories"></div>
+
+    <div class="products" id="products"></div>
+
+    <button class="cart-button" id="cart-btn" style="display: none;">
+        <span>🛒 Корзина</span>
+        <span id="cart-total">0 ₸</span>
+    </button>
+
+    <!-- Модальное окно товара -->
+    <div id="product-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="product-title">Товар</h2>
+                <span class="close" onclick="closeProductModal()">&times;</span>
+            </div>
+            <div class="product-detail" id="product-detail"></div>
+        </div>
+    </div>
+
+    <!-- Модальное окно корзины -->
+    <div id="cart-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🛒 Корзина</h2>
+                <span class="close" onclick="closeCartModal()">&times;</span>
+            </div>
+            <div class="cart-items" id="cart-items"></div>
+            <div id="checkout-form" style="display: none; padding: 20px;">
+                <h3 style="margin-bottom: 16px;">📝 Оформление заказа</h3>
+                <form id="order-form">
+                    <div class="form-group">
+                        <label>Телефон *</label>
+                        <input type="tel" name="phone" required placeholder="+7 (XXX) XXX-XX-XX">
+                    </div>
+                    <div class="form-group">
+                        <label>Адрес доставки *</label>
+                        <textarea name="address" required placeholder="Укажите адрес доставки"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Способ оплаты *</label>
+                        <select name="paymentMethod" required id="payment-methods">
+                            <option value="">Выберите способ оплаты</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Комментарий</label>
+                        <textarea name="comment" placeholder="Дополнительные пожелания"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="cart-total">
+                <div class="total-row">
+                    <span>Товары:</span>
+                    <span id="subtotal">0 ₸</span>
+                </div>
+                <div class="total-row">
+                    <span>Доставка:</span>
+                    <span id="delivery">0 ₸</span>
+                </div>
+                <div class="total-row final">
+                    <span>Итого:</span>
+                    <span id="final-total">0 ₸</span>
+                </div>
+                <button class="add-to-cart" id="checkout-btn" onclick="proceedToCheckout()">
+                    Оформить заказ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.enableClosingConfirmation();
+
+        const API_URL = window.location.origin;
+        let products = [];
+        let categories = [];
+        let cart = [];
+        let settings = {};
+        let selectedCategory = null;
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadSettings();
+            await loadCategories();
+            await loadProducts();
+            await loadPaymentMethods();
+            
+            document.getElementById('search').addEventListener('input', (e) => {
+                filterProducts(e.target.value);
+            });
+            
+            document.getElementById('cart-btn').addEventListener('click', openCart);
+        });
+
+        // Загрузка настроек
+        async function loadSettings() {
+            try {
+                settings = await fetch(`${API_URL}/api/settings`).then(r => r.json());
+                document.getElementById('shop-name').textContent = `🏪 ${settings.shop_name || 'Магазин'}`;
+            } catch (error) {
+                console.error('Ошибка загрузки настроек:', error);
+            }
+        }
+
+        // Загрузка категорий
+        async function loadCategories() {
+            try {
+                categories = await fetch(`${API_URL}/api/categories`).then(r => r.json());
+                const container = document.getElementById('categories');
+                
+                container.innerHTML = `
+                    <button class="category-btn active" onclick="selectCategory(null)">Все</button>
+                    ${categories.map(cat => `
+                        <button class="category-btn" onclick="selectCategory(${cat.id})">${cat.name}</button>
+                    `).join('')}
+                `;
+            } catch (error) {
+                console.error('Ошибка загрузки категорий:', error);
+            }
+        }
+
+        // Загрузка товаров
+        async function loadProducts() {
+            try {
+                products = await fetch(`${API_URL}/api/products`).then(r => r.json());
+                renderProducts();
+            } catch (error) {
+                console.error('Ошибка загрузки товаров:', error);
+            }
+        }
+
+        // Загрузка способов оплаты
+        async function loadPaymentMethods() {
+            try {
+                const methods = await fetch(`${API_URL}/api/payment-methods`).then(r => r.json());
+                const select = document.getElementById('payment-methods');
+                select.innerHTML = '<option value="">Выберите способ оплаты</option>' +
+                    methods.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+            } catch (error) {
+                console.error('Ошибка загрузки способов оплаты:', error);
+            }
+        }
+
+        // Отображение товаров
+        function renderProducts(filtered = products) {
+            const container = document.getElementById('products');
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="empty"><div class="empty-icon">📦</div><p>Товары не найдены</p></div>';
+                return;
+            }
+
+            container.innerHTML = filtered.map(product => `
+                <div class="product-card" onclick="openProductModal(${product.id})">
+                    <img src="${product.image_url || 'https://via.placeholder.com/300'}" 
+                         class="product-image" 
+                         alt="${product.name}"
+                         onerror="this.src='https://via.placeholder.com/300'">
+                    <div class="product-info">
+                        <div class="product-name">${product.name}</div>
+                        <div>
+                            <span class="product-price">${product.price} ₸</span>
+                            ${product.old_price ? `<span class="old-price">${product.old_price} ₸</span>` : ''}
+                        </div>
+                        ${!product.in_stock ? '<div class="out-of-stock">Нет в наличии</div>' : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Фильтрация по категории
+        function selectCategory(categoryId) {
+            selectedCategory = categoryId;
+            
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            const filtered = categoryId 
+                ? products.filter(p => p.category_id === categoryId)
+                : products;
+            
+            renderProducts(filtered);
+        }
+
+        // Поиск товаров
+        function filterProducts(query) {
+            const filtered = products.filter(p => 
+                p.name.toLowerCase().includes(query.toLowerCase()) ||
+                (p.description && p.description.toLowerCase().includes(query.toLowerCase()))
+            );
+            renderProducts(filtered);
+        }
+
+        // Открыть товар
+        function openProductModal(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+
+            document.getElementById('product-title').textContent = product.name;
+            document.getElementById('product-detail').innerHTML = `
+                <img src="${product.image_url || 'https://via.placeholder.com/400'}" 
+                     class="product-detail-image" 
+                     alt="${product.name}"
+                     onerror="this.src='https://via.placeholder.com/400'">
+                <h3>${product.name}</h3>
+                <p style="color: #666; margin: 12px 0;">${product.description || ''}</p>
+                <div style="font-size: 24px; font-weight: bold; color: var(--tg-theme-button-color, #2481cc); margin: 16px 0;">
+                    ${product.price} ₸
+                    ${product.old_price ? `<span style="text-decoration: line-through; color: #999; font-size: 18px; margin-left: 8px;">${product.old_price} ₸</span>` : ''}
+                </div>
+                ${product.in_stock ? `
+                    <div class="quantity-control">
+                        <button class="quantity-btn" onclick="changeQuantity(-1)">−</button>
+                        <span class="quantity" id="modal-quantity">1</span>
+                        <button class="quantity-btn" onclick="changeQuantity(1)">+</button>
+                    </div>
+                    <button class="add-to-cart" onclick="addToCart(${product.id})">
+                        Добавить в корзину • ${product.price} ₸
+                    </button>
+                ` : '<div style="color: #e74c3c; font-weight: bold;">Товар временно отсутствует</div>'}
+            `;
+            
+            document.getElementById('product-modal').classList.add('active');
+        }
+
+        function closeProductModal() {
+            document.getElementById('product-modal').classList.remove('active');
+        }
+
+        let modalQuantity = 1;
+
+        function changeQuantity(delta) {
+            modalQuantity = Math.max(1, modalQuantity + delta);
+            document.getElementById('modal-quantity').textContent = modalQuantity;
+        }
+
+        // Добавить в корзину
+        function addToCart(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+
+            const existingItem = cart.find(item => item.id === productId);
+            if (existingItem) {
+                existingItem.quantity += modalQuantity;
+            } else {
+                cart.push({
+                    id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    image_url: product.image_url,
+                    quantity: modalQuantity
+                });
+            }
+
+            updateCartButton();
+            closeProductModal();
+            modalQuantity = 1;
+            
+            tg.showAlert('Товар добавлен в корзину!');
+        }
+
+        // Обновить кнопку корзины
+        function updateCartButton() {
+            const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const btn = document.getElementById('cart-btn');
+            
+            if (cart.length > 0) {
+                btn.style.display = 'flex';
+                document.getElementById('cart-total').textContent = `${total.toFixed(2)} ₸`;
+            } else {
+                btn.style.display = 'none';
+            }
+        }
+
+        // Открыть корзину
+        function openCart() {
+            if (cart.length === 0) {
+                tg.showAlert('Корзина пуста');
+                return;
+            }
+
+            const container = document.getElementById('cart-items');
+            container.innerHTML = cart.map(item => `
+                <div class="cart-item">
+                    <img src="${item.image_url || 'https://via.placeholder.com/60'}" 
+                         class="cart-item-image" 
+                         alt="${item.name}"
+                         onerror="this.src='https://via.placeholder.com/60'">
+                    <div class="cart-item-info">
+                        <div class="cart-item-name">${item.name}</div>
+                        <div class="cart-item-price">${item.price} ₸</div>
+                    </div>
+                    <div class="cart-item-controls">
+                        <button class="mini-btn" onclick="updateCartItemQuantity(${item.id}, -1)">−</button>
+                        <span>${item.quantity}</span>
+                        <button class="mini-btn" onclick="updateCartItemQuantity(${item.id}, 1)">+</button>
+                    </div>
+                </div>
+            `).join('');
+
+            updateCartTotals();
+            document.getElementById('checkout-form').style.display = 'none';
+            document.getElementById('checkout-btn').textContent = 'Оформить заказ';
+            document.getElementById('cart-modal').classList.add('active');
+        }
+
+        function closeCartModal() {
+            document.getElementById('cart-modal').classList.remove('active');
+        }
+
+        // Обновить количество товара в корзине
+        function updateCartItemQuantity(productId, delta) {
+            const item = cart.find(i => i.id === productId);
+            if (!item) return;
+
+            item.quantity += delta;
+            
+            if (item.quantity <= 0) {
+                cart = cart.filter(i => i.id !== productId);
+            }
+
+            updateCartButton();
+            openCart();
+        }
+
+        // Обновить итоги
+        function updateCartTotals() {
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const deliveryCost = parseFloat(settings.delivery_cost || 0);
+            const freeDeliveryFrom = parseFloat(settings.free_delivery_from || 0);
+            
+            const delivery = subtotal >= freeDeliveryFrom ? 0 : deliveryCost;
+            const total = subtotal + delivery;
+
+            document.getElementById('subtotal').textContent = `${subtotal.toFixed(2)} ₸`;
+            document.getElementById('delivery').textContent = `${delivery.toFixed(2)} ₸`;
+            document.getElementById('final-total').textContent = `${total.toFixed(2)} ₸`;
+        }
+
+        // Перейти к оформлению
+        function proceedToCheckout() {
+            const form = document.getElementById('checkout-form');
+            
+            if (form.style.display === 'none') {
+                form.style.display = 'block';
+                document.getElementById('checkout-btn').textContent = 'Отправить заказ';
+                form.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                submitOrder();
+            }
+        }
+
+        // Отправить заказ
+        function submitOrder() {
+            const form = document.getElementById('order-form');
+            const formData = new FormData(form);
+            
+            if (!form.checkValidity()) {
+                tg.showAlert('Заполните все обязательные поля');
+                return;
+            }
+
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const deliveryCost = parseFloat(settings.delivery_cost || 0);
+            const freeDeliveryFrom = parseFloat(settings.free_delivery_from || 0);
+            const delivery = subtotal >= freeDeliveryFrom ? 0 : deliveryCost;
+            const total = subtotal + delivery;
+
+            const orderData = {
+                cart: cart,
+                total: total,
+                phone: formData.get('phone'),
+                address: formData.get('address'),
+                paymentMethod: formData.get('paymentMethod'),
+                comment: formData.get('comment')
+            };
+
+            tg.sendData(JSON.stringify(orderData));
+            tg.close();
+        }
+    </script>
+</body>
+</html>

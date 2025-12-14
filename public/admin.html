@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель магазина</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+            transition: all 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .tab.active {
+            background: #2481cc;
+            color: white;
+        }
+
+        .content {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            min-height: 400px;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            background: #2481cc;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #1a6cb5;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn-success {
+            background: #27ae60;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+        }
+
+        .close {
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .image-preview {
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .stat-card h3 {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .order-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-pending { background: #ffeaa7; color: #d63031; }
+        .status-confirmed { background: #55efc4; color: #00b894; }
+        .status-preparing { background: #74b9ff; color: #0984e3; }
+        .status-delivering { background: #a29bfe; color: #6c5ce7; }
+        .status-completed { background: #55efc4; color: #00b894; }
+        .status-cancelled { background: #fab1a0; color: #d63031; }
+
+        .checkbox {
+            width: auto !important;
+            margin-right: 8px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .tabs {
+                flex-wrap: nowrap;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            th, td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚙️ Админ-панель</h1>
+            <p id="userInfo">Загрузка...</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('stats')">📊 Статистика</button>
+            <button class="tab" onclick="switchTab('orders')">📦 Заказы</button>
+            <button class="tab" onclick="switchTab('categories')">🏷 Категории</button>
+            <button class="tab" onclick="switchTab('products')">📦 Товары</button>
+            <button class="tab" onclick="switchTab('settings')">⚙️ Настройки</button>
+        </div>
+
+        <div class="content">
+            <!-- Статистика -->
+            <div id="stats-section" class="section active">
+                <h2>📊 Статистика магазина</h2>
+                <div class="stats-grid">
+                    <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <h3>Всего заказов</h3>
+                        <div class="value" id="stat-orders">0</div>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                        <h3>Всего товаров</h3>
+                        <div class="value" id="stat-products">0</div>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                        <h3>Категорий</h3>
+                        <div class="value" id="stat-categories">0</div>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                        <h3>Пользователей</h3>
+                        <div class="value" id="stat-users">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Заказы -->
+            <div id="orders-section" class="section">
+                <h2>📦 Заказы</h2>
+                <div id="orders-list"></div>
+            </div>
+
+            <!-- Категории -->
+            <div id="categories-section" class="section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>🏷 Категории</h2>
+                    <button class="btn btn-success" onclick="openCategoryModal()">+ Добавить категорию</button>
+                </div>
+                <div id="categories-list"></div>
+            </div>
+
+            <!-- Товары -->
+            <div id="products-section" class="section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>📦 Товары</h2>
+                    <button class="btn btn-success" onclick="openProductModal()">+ Добавить товар</button>
+                </div>
+                <div id="products-list"></div>
+            </div>
+
+            <!-- Настройки -->
+            <div id="settings-section" class="section">
+                <h2>⚙️ Настройки магазина</h2>
+                <form id="settings-form">
+                    <div class="form-group">
+                        <label>Название магазина</label>
+                        <input type="text" name="shop_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Часы работы</label>
+                        <input type="text" name="working_hours" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Минимальная сумма заказа (₸)</label>
+                        <input type="number" name="min_order_amount" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Стоимость доставки (₸)</label>
+                        <input type="number" name="delivery_cost" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Бесплатная доставка от (₸)</label>
+                        <input type="number" name="free_delivery_from" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Контактный телефон</label>
+                        <input type="text" name="contact_phone" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="contact_email" required>
+                    </div>
+                    <button type="submit" class="btn btn-success">💾 Сохранить настройки</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно категории -->
+    <div id="category-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="category-modal-title">Добавить категорию</h2>
+                <span class="close" onclick="closeCategoryModal()">&times;</span>
+            </div>
+            <form id="category-form">
+                <input type="hidden" name="id">
+                <div class="form-group">
+                    <label>Название *</label>
+                    <input type="text" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label>Описание</label>
+                    <textarea name="description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Изображение</label>
+                    <input type="file" name="image" accept="image/*" onchange="previewImage(this, 'category-preview')">
+                    <img id="category-preview" class="image-preview" style="display: none;">
+                </div>
+                <div class="form-group">
+                    <label>Порядок отображения</label>
+                    <input type="number" name="order_index" value="0">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="active" class="checkbox" checked> Активна
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-success">💾 Сохранить</button>
+                <button type="button" class="btn" onclick="closeCategoryModal()">Отмена</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно товара -->
+    <div id="product-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="product-modal-title">Добавить товар</h2>
+                <span class="close" onclick="closeProductModal()">&times;</span>
+            </div>
+            <form id="product-form">
+                <input type="hidden" name="id">
+                <div class="form-group">
+                    <label>Категория *</label>
+                    <select name="category_id" id="product-category" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Название *</label>
+                    <input type="text" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label>Описание</label>
+                    <textarea name="description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Цена (₸) *</label>
+                    <input type="number" name="price" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Старая цена (₸)</label>
+                    <input type="number" name="old_price" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Изображение</label>
+                    <input type="file" name="image" accept="image/*" onchange="previewImage(this, 'product-preview')">
+                    <img id="product-preview" class="image-preview" style="display: none;">
+                </div>
+                <div class="form-group">
+                    <label>Порядок отображения</label>
+                    <input type="number" name="order_index" value="0">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="active" class="checkbox" checked> Активен
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="in_stock" class="checkbox" checked> В наличии
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-success">💾 Сохранить</button>
+                <button type="button" class="btn" onclick="closeProductModal()">Отмена</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        const API_URL = window.location.origin;
+        const telegramId = tg.initDataUnsafe?.user?.id;
+
+        // Проверка доступа
+        if (!telegramId) {
+            document.body.innerHTML = '<div style="text-align: center; padding: 40px;"><h2>❌ Ошибка доступа</h2><p>Откройте через Telegram</p></div>';
+        }
+
+        // Заголовки для запросов
+        const headers = {
+            'Content-Type': 'application/json',
+            'X-Telegram-Id': telegramId
+        };
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStats();
+            loadOrders();
+            loadCategories();
+            loadProducts();
+            loadSettings();
+            
+            document.getElementById('userInfo').textContent = `Админ: ${tg.initDataUnsafe?.user?.first_name || 'Пользователь'}`;
+        });
+
+        // Переключение вкладок
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`${tab}-section`).classList.add('active');
+        }
+
+        // Загрузка статистики
+        async function loadStats() {
+            try {
+                const [orders, products, categories] = await Promise.all([
+                    fetch(`${API_URL}/api/admin/orders`, { headers }).then(r => r.json()),
+                    fetch(`${API_URL}/api/admin/products`, { headers }).then(r => r.json()),
+                    fetch(`${API_URL}/api/admin/categories`, { headers }).then(r => r.json())
+                ]);
+
+                document.getElementById('stat-orders').textContent = orders.length;
+                document.getElementById('stat-products').textContent = products.length;
+                document.getElementById('stat-categories').textContent = categories.length;
+                document.getElementById('stat-users').textContent = orders.length > 0 ? 
+                    new Set(orders.map(o => o.user_id)).size : 0;
+            } catch (error) {
+                console.error('Ошибка загрузки статистики:', error);
+            }
+        }
+
+        // Загрузка заказов
+        async function loadOrders() {
+            try {
+                const orders = await fetch(`${API_URL}/api/admin/orders`, { headers }).then(r => r.json());
+                const container = document.getElementById('orders-list');
+
+                if (orders.length === 0) {
+                    container.innerHTML = '<div class="empty"><div class="empty-icon">📦</div><p>Заказов пока нет</p></div>';
+                    return;
+                }
+
+                container.innerHTML = orders.map(order => {
+                    const items = JSON.parse(order.items);
+                    return `
+                        <div class="order-card">
+                            <div class="order-header">
+                                <div>
+                                    <strong>№${order.order_number}</strong><br>
+                                    <small>${order.first_name} (@${order.username || 'нет'})</small>
+                                </div>
+                                <div>
+                                    <select onchange="updateOrderStatus(${order.id}, this.value)" style="padding: 8px; border-radius: 6px;">
+                                        <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>⏳ Ожидает</option>
+                                        <option value="confirmed" ${order.status === 'confirmed' ? 'selected' : ''}>✅ Подтвержден</option>
+                                        <option value="preparing" ${order.status === 'preparing' ? 'selected' : ''}>👨‍🍳 Готовится</option>
+                                        <option value="delivering" ${order.status === 'delivering' ? 'selected' : ''}>🚚 Доставляется</option>
+                                        <option value="completed" ${order.status === 'completed' ? 'selected' : ''}>✅ Завершен</option>
+                                        <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>❌ Отменен</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="margin: 10px 0;">
+                                ${items.map(item => `• ${item.name} x${item.quantity} - ${item.price * item.quantity} ₸`).join('<br>')}
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 12px; color: #666;">
+                                <span>💰 ${order.total} ₸</span>
+                                <span>📅 ${new Date(order.created_at).toLocaleString('ru-RU')}</span>
+                            </div>
+                            ${order.phone ? `<div style="margin-top: 8px; font-size: 12px;">📞 ${order.phone}</div>` : ''}
+                            ${order.delivery_address ? `<div style="font-size: 12px;">📍 ${order.delivery_address}</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Ошибка загрузки заказов:', error);
+            }
+        }
+
+        // Обновление статуса заказа
+        async function updateOrderStatus(orderId, status) {
+            try {
+                await fetch(`${API_URL}/api/admin/orders/${orderId}/status`, {
+                    method: 'PUT',
+                    headers,
+                    body: JSON.stringify({ status })
+                });
+                tg.showAlert('Статус заказа обновлен!');
+            } catch (error) {
+                tg.showAlert('Ошибка обновления статуса');
+            }
+        }
+
+        // Загрузка категорий
+        async function loadCategories() {
+            try {
+                const categories = await fetch(`${API_URL}/api/admin/categories`, { headers }).then(r => r.json());
+                const container = document.getElementById('categories-list');
+
+                if (categories.length === 0) {
+                    container.innerHTML = '<div class="empty"><div class="empty-icon">🏷</div><p>Категорий пока нет</p></div>';
+                    return;
+                }
+
+                container.innerHTML = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Название</th>
+                                <th>Порядок</th>
+                                <th>Статус</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${categories.map(cat => `
+                                <tr>
+                                    <td>${cat.name}</td>
+                                    <td>${cat.order_index}</td>
+                                    <td>${cat.active ? '✅ Активна' : '❌ Не активна'}</td>
+                                    <td>
+                                        <button class="btn" onclick='editCategory(${JSON.stringify(cat)})'>✏️</button>
+                                        <button class="btn btn-danger" onclick="deleteCategory(${cat.id})">🗑️</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (error) {
+                console.error('Ошибка загрузки категорий:', error);
+            }
+        }
+
+        // Загрузка товаров
+        async function loadProducts() {
+            try {
+                const [products, categories] = await Promise.all([
+                    fetch(`${API_URL}/api/admin/products`, { headers }).then(r => r.json()),
+                    fetch(`${API_URL}/api/admin/categories`, { headers }).then(r => r.json())
+                ]);
+
+                // Заполняем select категорий
+                const categorySelect = document.getElementById('product-category');
+                categorySelect.innerHTML = categories.map(cat => 
+                    `<option value="${cat.id}">${cat.name}</option>`
+                ).join('');
+
+                const container = document.getElementById('products-list');
+
+                if (products.length === 0) {
+                    container.innerHTML = '<div class="empty"><div class="empty-icon">📦</div><p>Товаров пока нет</p></div>';
+                    return;
+                }
+
+                container.innerHTML = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Название</th>
+                                <th>Категория</th>
+                                <th>Цена</th>
+                                <th>Статус</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${products.map(prod => `
+                                <tr>
+                                    <td>${prod.name}</td>
+                                    <td>${prod.category_name || 'Без категории'}</td>
+                                    <td>${prod.price} ₸</td>
+                                    <td>
+                                        ${prod.active ? '✅' : '❌'}
+                                        ${prod.in_stock ? '📦' : '❌'}
+                                    </td>
+                                    <td>
+                                        <button class="btn" onclick='editProduct(${JSON.stringify(prod).replace(/'/g, "\\'")})'>✏️</button>
+                                        <button class="btn btn-danger" onclick="deleteProduct(${prod.id})">🗑️</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (error) {
+                console.error('Ошибка загрузки товаров:', error);
+            }
+        }
+
+        // Загрузка настроек
+        async function loadSettings() {
+            try {
+                const settings = await fetch(`${API_URL}/api/settings`).then(r => r.json());
+                const form = document.getElementById('settings-form');
+                
+                Object.entries(settings).forEach(([key, value]) => {
+                    const input = form.elements[key];
+                    if (input) input.value = value;
+                });
+
+                form.onsubmit = async (e) => {
+                    e.preventDefault();
+                    const formData = new FormData(form);
+                    const data = Object.fromEntries(formData);
+
+                    try {
+                        await fetch(`${API_URL}/api/admin/settings`, {
+                            method: 'PUT',
+                            headers,
+                            body: JSON.stringify(data)
+                        });
+                        tg.showAlert('Настройки сохранены!');
+                    } catch (error) {
+                        tg.showAlert('Ошибка сохранения настроек');
+                    }
+                };
+            } catch (error) {
+                console.error('Ошибка загрузки настроек:', error);
+            }
+        }
+
+        // Модальные окна категорий
+        function openCategoryModal() {
+            document.getElementById('category-modal-title').textContent = 'Добавить категорию';
+            document.getElementById('category-form').reset();
+            document.getElementById('category-preview').style.display = 'none';
+            document.getElementById('category-modal').classList.add('active');
+        }
+
+        function closeCategoryModal() {
+            document.getElementById('category-modal').classList.remove('active');
+        }
+
+        function editCategory(category) {
+            document.getElementById('category-modal-title').textContent = 'Редактировать категорию';
+            const form = document.getElementById('category-form');
+            form.elements.id.value = category.id;
+            form.elements.name.value = category.name;
+            form.elements.description.value = category.description || '';
+            form.elements.order_index.value = category.order_index;
+            form.elements.active.checked = category.active;
+            
+            if (category.image_url) {
+                document.getElementById('category-preview').src = API_URL + category.image_url;
+                document.getElementById('category-preview').style.display = 'block';
+            }
+            
+            document.getElementById('category-modal').classList.add('active');
+        }
+
+        async function deleteCategory(id) {
+            if (!confirm('Удалить категорию?')) return;
+            
+            try {
+                await fetch(`${API_URL}/api/admin/categories/${id}`, {
+                    method: 'DELETE',
+                    headers
+                });
+                loadCategories();
+                tg.showAlert('Категория удалена');
+            } catch (error) {
+                tg.showAlert('Ошибка удаления');
+            }
+        }
+
+        // Модальные окна товаров
+        function openProductModal() {
+            document.getElementById('product-modal-title').textContent = 'Добавить товар';
+            document.getElementById('product-form').reset();
+            document.getElementById('product-preview').style.display = 'none';
+            document.getElementById('product-modal').classList.add('active');
+        }
+
+        function closeProductModal() {
+            document.getElementById('product-modal').classList.remove('active');
+        }
+
+        function editProduct(product) {
+            document.getElementById('product-modal-title').textContent = 'Редактировать товар';
+            const form = document.getElementById('product-form');
+            form.elements.id.value = product.id;
+            form.elements.category_id.value = product.category_id;
+            form.elements.name.value = product.name;
+            form.elements.description.value = product.description || '';
+            form.elements.price.value = product.price;
+            form.elements.old_price.value = product.old_price || '';
+            form.elements.order_index.value = product.order_index;
+            form.elements.active.checked = product.active;
+            form.elements.in_stock.checked = product.in_stock;
+            
+            if (product.image_url) {
+                document.getElementById('product-preview').src = API_URL + product.image_url;
+                document.getElementById('product-preview').style.display = 'block';
+            }
+            
+            document.getElementById('product-modal').classList.add('active');
+        }
+
+        async function deleteProduct(id) {
+            if (!confirm('Удалить товар?')) return;
+            
+            try {
+                await fetch(`${API_URL}/api/admin/products/${id}`, {
+                    method: 'DELETE',
+                    headers
+                });
+                loadProducts();
+                tg.showAlert('Товар удален');
+            } catch (error) {
+                tg.showAlert('Ошибка удаления');
+            }
+        }
+
+        // Обработка форм
+        document.getElementById('category-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const id = formData.get('id');
+            
+            try {
+                const url = id ? `${API_URL}/api/admin/categories/${id}` : `${API_URL}/api/admin/categories`;
+                const method = id ? 'PUT' : 'POST';
+                
+                await fetch(url, {
+                    method,
+                    headers: { 'X-Telegram-Id': telegramId },
+                    body: formData
+                });
+                
+                closeCategoryModal();
+                loadCategories();
+                loadStats();
+                tg.showAlert('Категория сохранена!');
+            } catch (error) {
+                tg.showAlert('Ошибка сохранения');
+            }
+        };
+
+        document.getElementById('product-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const id = formData.get('id');
+            
+            try {
+                const url = id ? `${API_URL}/api/admin/products/${id}` : `${API_URL}/api/admin/products`;
+                const method = id ? 'PUT' : 'POST';
+                
+                await fetch(url, {
+                    method,
+                    headers: { 'X-Telegram-Id': telegramId },
+                    body: formData
+                });
+                
+                closeProductModal();
+                loadProducts();
+                loadStats();
+                tg.showAlert('Товар сохранен!');
+            } catch (error) {
+                tg.showAlert('Ошибка сохранения');
+            }
+        };
+
+        // Предпросмотр изображения
+        function previewImage(input, previewId) {
+            const preview = document.getElementById(previewId);
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+    </script>
+</body>
+</html>
